@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AC-ViT-POG — Retinal Fundus Disease Grading</title>
+<style>
+  :root {
+    --bg:       #070b12;
+    --surface:  #0d1117;
+    --card:     #111820;
+    --card2:    #161f2c;
+    --border:   #1e2d3d;
+    --border2:  #263649;
+    --accent:   #3b82f6;
+    --accent2:  #60a5fa;
+    --accent3:  #93c5fd;
+    --green:    #10b981;
+    --yellow:   #f59e0b;
+    --orange:   #f97316;
+    --red:      #ef4444;
+    --purple:   #8b5cf6;
+    --teal:     #14b8a6;
+    --text:     #e2e8f0;
+    --muted:    #94a3b8;
+    --dim:      #475569;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    font-size: 0.95rem;
+    letter-spacing: 0.03em;
+  }
+
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  .logo-sub {
+    font-size: 0.68rem;
+    color: var(--muted);
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-left: 4px;
+  }
+
+  .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .badge {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid;
+  }
+
+  .badge-blue   { color: var(--accent2); border-color: rgba(59,130,246,0.35); background: rgba(59,130,246,0.1); }
+  .badge-purple { color: #a78bfa;        border-color: rgba(139,92,246,0.35); background: rgba(139,92,246,0.1); }
+  .badge-green  { color: var(--green);   border-color: rgba(16,185,129,0.35); background: rgba(16,185,129,0.1); }
+
+  /* ── LAYOUT ── */
+  .layout {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 56px);
+  }
+
+  /* ── LEFT PANEL ── */
+  .left-panel {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 1.5rem;
+    gap: 1.25rem;
+    background: var(--surface);
+  }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel {
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  /* ── SECTION HEADING ── */
+  .section-heading {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-heading::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+
+  .card-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ── UPLOAD ZONE ── */
+  .upload-zone {
+    border: 1.5px dashed var(--border2);
+    border-radius: 10px;
+    padding: 2rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+    background: var(--card2);
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(59,130,246,0.05);
+  }
+
+  .upload-zone input[type=file] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .upload-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  .upload-text { font-size: 0.82rem; color: var(--muted); }
+  .upload-hint { font-size: 0.72rem; color: var(--dim); margin-top: 4px; }
+
+  /* ── FUNDUS PREVIEW ── */
+  .fundus-preview {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #000;
+    aspect-ratio: 1;
+    display: none;
+  }
+
+  .fundus-preview.visible { display: block; }
+
+  .fundus-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .heatmap-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 0.4s;
+    pointer-events: none;
+  }
+
+  .heatmap-canvas.visible { opacity: 0.6; }
+
+  .preview-controls {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .toggle-btn {
+    flex: 1;
+    padding: 6px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--card2);
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+
+  .toggle-btn:hover { border-color: var(--accent); color: var(--accent2); }
+  .toggle-btn.active { background: rgba(59,130,246,0.12); border-color: var(--accent); color: var(--accent2); }
+
+  /* ── COORDINATE INPUTS ── */
+  .coord-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .field label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .field input {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text);
+    font-size: 0.82rem;
+    padding: 7px 10px;
+    outline: none;
+    transition: border-color 0.15s;
+    font-family: inherit;
+  }
+
+  .field input:focus { border-color: var(--accent); }
+
+  /* ── RUN BUTTON ── */
+  .run-btn {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: opacity 0.2s, transform 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .run-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+  .run-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+  /* ── SPINNER ── */
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── RESULTS PLACEHOLDER ── */
+  .results-placeholder {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--dim);
+    gap: 0.75rem;
+    padding: 3rem;
+    text-align: center;
+  }
+
+  .results-placeholder .ph-icon { font-size: 3rem; opacity: 0.4; }
+  .results-placeholder p { font-size: 0.82rem; max-width: 280px; line-height: 1.6; }
+
+  /* ── RESULTS AREA ── */
+  #results-area { display: none; flex-direction: column; gap: 1.25rem; }
+  #results-area.visible { display: flex; }
+
+  /* ── REFERRAL BANNER ── */
+  .referral-banner {
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border: 1.5px solid;
+  }
+
+  .referral-icon { font-size: 1.75rem; flex-shrink: 0; }
+  .referral-title { font-size: 1rem; font-weight: 800; }
+  .referral-sub   { font-size: 0.78rem; margin-top: 2px; }
+
+  .ref-green  { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.3); }
+  .ref-yellow { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.3); }
+  .ref-orange { background: rgba(249,115,22,0.08); border-color: rgba(249,115,22,0.3); }
+  .ref-red    { background: rgba(239,68,68,0.08);  border-color: rgba(239,68,68,0.3); }
+
+  .ref-green  .referral-title { color: var(--green); }
+  .ref-yellow .referral-title { color: var(--yellow); }
+  .ref-orange .referral-title { color: var(--orange); }
+  .ref-red    .referral-title { color: var(--red); }
+
+  /* ── GRADE CARDS ── */
+  .grade-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .grade-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+
+  .grade-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .grade-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .grade-name {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 0.875rem;
+  }
+
+  /* Grade probability bars */
+  .grade-bars { display: flex; flex-direction: column; gap: 4px; }
+
+  .grade-bar-row {
+    display: grid;
+    grid-template-columns: 40px 1fr 36px;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
+  }
+
+  .grade-bar-label { color: var(--muted); }
+  .grade-bar-track { height: 4px; background: var(--border2); border-radius: 99px; overflow: hidden; }
+  .grade-bar-fill  { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
+  .grade-bar-val   { text-align: right; font-weight: 700; }
+
+  /* ── LESION GRID ── */
+  .lesion-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.75rem;
+  }
+
+  .lesion-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.875rem 0.75rem;
+    text-align: center;
+    transition: border-color 0.2s;
+  }
+
+  .lesion-card.detected { border-color: rgba(239,68,68,0.5); background: rgba(239,68,68,0.05); }
+  .lesion-card.low      { border-color: rgba(16,185,129,0.35); }
+
+  .lesion-icon  { font-size: 1.25rem; margin-bottom: 0.4rem; }
+  .lesion-name  { font-size: 0.65rem; font-weight: 600; color: var(--muted); margin-bottom: 0.5rem; line-height: 1.3; }
+  .lesion-prob  { font-size: 1.1rem; font-weight: 800; }
+
+  /* Ring chart */
+  .lesion-ring  {
+    width: 52px; height: 52px;
+    margin: 0 auto 0.5rem;
+    position: relative;
+  }
+
+  .lesion-ring svg { width: 52px; height: 52px; transform: rotate(-90deg); }
+  .ring-bg-l  { fill: none; stroke: var(--border2); stroke-width: 5; }
+  .ring-fg-l  { fill: none; stroke-width: 5; stroke-linecap: round; transition: stroke-dashoffset 0.8s ease; }
+  .ring-text  {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 800;
+  }
+
+  /* ── POG GRAPH ── */
+  .pog-container {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+
+  #pog-canvas {
+    width: 100%;
+    border-radius: 8px;
+    background: var(--card2);
+    display: block;
+  }
+
+  .pog-legend {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .pog-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  .pog-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── ATTENTION MAP ── */
+  .attention-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+
+  .attention-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 1rem;
+    background: var(--card2);
+    padding: 3px;
+    border-radius: 8px;
+  }
+
+  .attn-tab {
+    flex: 1;
+    padding: 5px 8px;
+    border-radius: 6px;
+    border: none;
+    background: none;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+
+  .attn-tab.active { background: var(--card); color: var(--accent2); }
+
+  #attention-canvas {
+    width: 100%;
+    border-radius: 8px;
+    background: #000;
+    display: block;
+  }
+
+  /* ── CONFIDENCE BARS ── */
+  .conf-bar-wrap { margin-top: 0.75rem; }
+
+  .conf-bar-row {
+    display: grid;
+    grid-template-columns: 140px 1fr 48px;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 0.75rem;
+  }
+
+  .conf-bar-label { color: var(--muted); }
+  .conf-bar-track { height: 6px; background: var(--border2); border-radius: 99px; overflow: hidden; }
+  .conf-bar-fill  { height: 100%; border-radius: 99px; transition: width 0.7s ease; }
+  .conf-bar-val   { text-align: right; font-weight: 700; }
+
+  /* ── SAMPLE IMAGES ── */
+  .sample-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+
+  .sample-img {
+    aspect-ratio: 1;
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 1.5px solid var(--border);
+    transition: border-color 0.2s, transform 0.15s;
+    background: #000;
+  }
+
+  .sample-img:hover { border-color: var(--accent); transform: scale(1.03); }
+  .sample-img.active { border-color: var(--accent); }
+
+  .sample-img canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* ── MODEL INFO ── */
+  .model-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .info-item {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 10px;
+  }
+
+  .info-key { font-size: 0.65rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; }
+  .info-val { font-size: 0.82rem; font-weight: 700; color: var(--accent2); margin-top: 2px; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .left-panel { border-right: none; border-bottom: 1px solid var(--border); }
+    .lesion-grid { grid-template-columns: repeat(3, 1fr); }
+    .grade-grid  { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── TOP BAR ── -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">👁</div>
+    AC-ViT-POG
+    <span class="logo-sub">Retinal Fundus Grading</span>
+  </div>
+  <div class="topbar-right">
+    <span class="badge badge-purple">ViT-B/16 Backbone</span>
+    <span class="badge badge-blue">Pathological Occurrence Graph</span>
+    <span class="badge badge-green">IDRiD Dataset</span>
+  </div>
+</div>
+
+<!-- ── MAIN LAYOUT ── -->
+<div class="layout">
+
+  <!-- ════════ LEFT PANEL ════════ -->
+  <div class="left-panel">
+
+    <!-- Upload -->
+    <div>
+      <div class="section-heading">Fundus Image Input</div>
+      <div class="upload-zone" id="uploadZone"
+           ondragover="handleDragOver(event)"
+           ondragleave="handleDragLeave(event)"
+           ondrop="handleDrop(event)">
+        <input type="file" accept="image/*" onchange="handleFileSelect(event)">
+        <div class="upload-icon">🔬</div>
+        <div class="upload-text">Drop fundus image or click to browse</div>
+        <div class="upload-hint">JPG/PNG · Ideally 4288×2848 (IDRiD native)</div>
+      </div>
+    </div>
+
+    <!-- Fundus preview -->
+    <div class="fundus-preview" id="fundusPreview">
+      <img id="fundusImg" src="" alt="Fundus image">
+      <canvas class="heatmap-canvas" id="heatmapCanvas"></canvas>
+    </div>
+
+    <div class="preview-controls" id="previewControls" style="display:none;">
+      <div class="toggle-btn active" id="btnOriginal" onclick="setOverlay('original')">Original</div>
+      <div class="toggle-btn" id="btnHeatmap"  onclick="setOverlay('heatmap')">GradCAM++</div>
+      <div class="toggle-btn" id="btnBlend"    onclick="setOverlay('blend')">Overlay</div>
+    </div>
+
+    <!-- Coordinates -->
+    <div class="card">
+      <div class="card-title">📍 Anatomical Landmarks <span style="color:var(--dim);font-weight:400;font-size:0.7rem;margin-left:4px;">(optional — auto-detected if blank)</span></div>
+      <div class="coord-grid">
+        <div class="field">
+          <label>Optic Disc X (px)</label>
+          <input type="number" id="odX" placeholder="e.g. 2660" value="2660">
+        </div>
+        <div class="field">
+          <label>Optic Disc Y (px)</label>
+          <input type="number" id="odY" placeholder="e.g. 1440" value="1440">
+        </div>
+        <div class="field">
+          <label>Fovea X (px)</label>
+          <input type="number" id="foveaX" placeholder="e.g. 2144" value="2144">
+        </div>
+        <div class="field">
+          <label>Fovea Y (px)</label>
+          <input type="number" id="foveaY" placeholder="e.g. 1424" value="1424">
+        </div>
+      </div>
+    </div>
+
+    <!-- Sample images -->
+    <div class="card">
+      <div class="card-title">🗂 Sample IDRiD Cases</div>
+      <div class="sample-grid" id="sampleGrid"></div>
+    </div>
+
+    <!-- Model info -->
+    <div class="card">
+      <div class="card-title">⚙️ Model Architecture</div>
+      <div class="model-info-grid">
+        <div class="info-item"><div class="info-key">Backbone</div><div class="info-val">ViT-B/16</div></div>
+        <div class="info-item"><div class="info-key">Parameters</div><div class="info-val">~89M</div></div>
+        <div class="info-item"><div class="info-key">Input Size</div><div class="info-val">512 × 512</div></div>
+        <div class="info-item"><div class="info-key">Patch Size</div><div class="info-val">16 × 16</div></div>
+        <div class="info-item"><div class="info-key">Transformer Depth</div><div class="info-val">12 layers</div></div>
+        <div class="info-item"><div class="info-key">Attention Heads</div><div class="info-val">12</div></div>
+        <div class="info-item"><div class="info-key">POG Nodes</div><div class="info-val">5 lesion types</div></div>
+        <div class="info-item"><div class="info-key">Output Tasks</div><div class="info-val">DR + DME + Lesions</div></div>
+      </div>
+    </div>
+
+    <!-- Run button -->
+    <button class="run-btn" id="runBtn" onclick="runInference()" disabled>
+      <div class="spinner" id="spinner"></div>
+      <span id="runBtnText">⚡ Run Inference</span>
+    </button>
+
+  </div>
+
+  <!-- ════════ RIGHT PANEL ════════ -->
+  <div class="right-panel">
+
+    <!-- Placeholder -->
+    <div class="results-placeholder" id="placeholder">
+      <div class="ph-icon">👁️</div>
+      <p>Upload a retinal fundus image and click <strong>Run Inference</strong> to get DR grading, DME assessment, lesion detection and GradCAM++ explainability.</p>
+    </div>
+
+    <!-- Results -->
+    <div id="results-area">
+
+      <!-- Referral banner -->
+      <div id="referralBanner" class="referral-banner">
+        <div class="referral-icon" id="referralIcon"></div>
+        <div>
+          <div class="referral-title" id="referralTitle"></div>
+          <div class="referral-sub" id="referralSub"></div>
+        </div>
+      </div>
+
+      <!-- DR + DME grades -->
+      <div>
+        <div class="section-heading">Disease Grading</div>
+        <div class="grade-grid">
+          <!-- DR -->
+          <div class="grade-card">
+            <div class="grade-label">Diabetic Retinopathy</div>
+            <div class="grade-value" id="drGradeVal" style="color:var(--accent2)">—</div>
+            <div class="grade-name"  id="drGradeName"></div>
+            <div class="grade-bars" id="drGradeBars"></div>
+          </div>
+          <!-- DME -->
+          <div class="grade-card">
+            <div class="grade-label">Diabetic Macular Edema</div>
+            <div class="grade-value" id="dmeGradeVal" style="color:var(--purple)">—</div>
+            <div class="grade-name"  id="dmeGradeName"></div>
+            <div class="grade-bars" id="dmeGradeBars"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lesion detection -->
+      <div>
+        <div class="section-heading">Lesion Detection</div>
+        <div class="lesion-grid" id="lesionGrid"></div>
+      </div>
+
+      <!-- Attention heatmap + POG side by side -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+
+        <!-- GradCAM++ -->
+        <div class="attention-section">
+          <div class="card-title">🔥 GradCAM++ Attention</div>
+          <div class="attention-tabs">
+            <button class="attn-tab active" onclick="switchAttnTab('dr',this)">DR Grade</button>
+            <button class="attn-tab" onclick="switchAttnTab('dme',this)">DME Grade</button>
+            <button class="attn-tab" onclick="switchAttnTab('ma',this)">MA</button>
+            <button class="attn-tab" onclick="switchAttnTab('he',this)">HE</button>
+            <button class="attn-tab" onclick="switchAttnTab('ex',this)">EX</button>
+          </div>
+          <canvas id="attention-canvas" height="280"></canvas>
+          <div style="font-size:0.7rem;color:var(--dim);margin-top:6px;text-align:center;">
+            Highlighting patches most influential to the selected prediction
+          </div>
+        </div>
+
+        <!-- POG -->
+        <div class="pog-container">
+          <div class="card-title">🕸 Pathological Occurrence Graph</div>
+          <canvas id="pog-canvas" height="240"></canvas>
+          <div class="pog-legend" id="pogLegend"></div>
+          <div style="font-size:0.7rem;color:var(--dim);margin-top:4px;">
+            Edge thickness = co-occurrence strength (learnable). Highlighted nodes = detected lesions.
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Confidence breakdown -->
+      <div class="card">
+        <div class="card-title">📊 Full Confidence Breakdown</div>
+        <div class="conf-bar-wrap" id="confBars"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+
+let uploadedImage  = null;   // HTMLImageElement
+let currentResult  = null;   // simulated inference result
+let overlayMode    = 'original';
+let currentAttnTab = 'dr';
+
+const LESION_NAMES  = ['Microaneurysms','Haemorrhages','Hard Exudates','Soft Exudates','Neovascularisation'];
+const LESION_ABBR   = ['MA','HE','EX','SE','NV'];
+const LESION_ICONS  = ['🔴','🩸','🟡','🌫️','🌱'];
+const LESION_COLORS = ['#ef4444','#f97316','#eab308','#94a3b8','#10b981'];
+
+const DR_LABELS  = ['No DR','Mild NPDR','Moderate NPDR','Severe NPDR','PDR'];
+const DME_LABELS = ['No DME','Mild DME','Severe DME'];
+
+const DR_COLORS  = ['#10b981','#84cc16','#f59e0b','#f97316','#ef4444'];
+const DME_COLORS = ['#10b981','#f59e0b','#ef4444'];
+
+const REFERRAL_MAP = {
+  '0,0':['No referral needed','✅','green'],
+  '1,0':['Annual review recommended','🟢','green'],
+  '1,1':['6-month ophthalmology review','🟡','yellow'],
+  '2,0':['6-month ophthalmology review','🟡','yellow'],
+  '2,1':['3-month ophthalmology review','🟠','orange'],
+  '2,2':['Urgent ophthalmology referral','🔴','red'],
+  '3,0':['Urgent ophthalmology referral','🔴','red'],
+  '3,1':['Urgent ophthalmology referral','🔴','red'],
+  '3,2':['Same-day emergency referral','🚨','red'],
+  '4,0':['Urgent ophthalmology referral','🔴','red'],
+  '4,1':['Same-day emergency referral','🚨','red'],
+  '4,2':['Same-day emergency referral','🚨','red'],
+};
+
+// IDRiD co-occurrence matrix (prior)
+const POG_ADJ = [
+  [1.00, 0.72, 0.68, 0.31, 0.18],
+  [0.72, 1.00, 0.61, 0.28, 0.22],
+  [0.68, 0.61, 1.00, 0.35, 0.15],
+  [0.31, 0.28, 0.35, 1.00, 0.20],
+  [0.18, 0.22, 0.15, 0.20, 1.00],
+];
+
+// ══════════════════════════════════════════════
+// SAMPLE IMAGES (generated synthetically)
+// ══════════════════════════════════════════════
+
+const SAMPLES = [
+  { label:'IDRiD_01', dr:0, dme:0, lesions:[0.12,0.08,0.07,0.05,0.02] },
+  { label:'IDRiD_12', dr:2, dme:1, lesions:[0.91,0.78,0.85,0.32,0.11] },
+  { label:'IDRiD_36', dr:3, dme:2, lesions:[0.97,0.92,0.88,0.61,0.44] },
+  { label:'IDRiD_54', dr:4, dme:2, lesions:[0.99,0.96,0.93,0.72,0.88] },
+];
+
+function drawSampleFundus(canvas, gradeIndex) {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width = canvas.parentElement.offsetWidth || 80;
+  const h = canvas.height = w;
+  const cx = w / 2, cy = h / 2, r = w * 0.45;
+
+  // Background
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, w, h);
+
+  // Fundus disc gradient
+  const grd = ctx.createRadialGradient(cx, cy, r * 0.1, cx, cy, r);
+  const colors = ['#1a0a00','#2d1200','#3a1800','#4a2000','#5a2800'];
+  grd.addColorStop(0, colors[gradeIndex] || '#3a1800');
+  grd.addColorStop(1, '#050200');
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = grd;
+  ctx.fill();
+
+  // Vessels
+  ctx.strokeStyle = '#8b4513';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 6; i++) {
+    const angle = (i / 6) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(angle) * r * 0.2, cy + Math.sin(angle) * r * 0.2);
+    ctx.quadraticCurveTo(
+      cx + Math.cos(angle + 0.4) * r * 0.6,
+      cy + Math.sin(angle + 0.4) * r * 0.6,
+      cx + Math.cos(angle) * r * 0.9,
+      cy + Math.sin(angle) * r * 0.9,
+    );
+    ctx.stroke();
+  }
+
+  // Optic disc
+  const odX = cx + r * 0.35, odY = cy;
+  const odGrd = ctx.createRadialGradient(odX, odY, 0, odX, odY, r * 0.12);
+  odGrd.addColorStop(0, '#ffe4b5');
+  odGrd.addColorStop(1, '#daa520');
+  ctx.beginPath();
+  ctx.arc(odX, odY, r * 0.12, 0, Math.PI * 2);
+  ctx.fillStyle = odGrd;
+  ctx.fill();
+
+  // Lesion dots based on grade
+  if (gradeIndex > 0) {
+    ctx.fillStyle = '#cc0000';
+    for (let i = 0; i < gradeIndex * 4; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const d = Math.random() * r * 0.7;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function initSampleGrid() {
+  const grid = document.getElementById('sampleGrid');
+  SAMPLES.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.className = 'sample-img';
+    div.id = `sample-${i}`;
+    const canvas = document.createElement('canvas');
+    div.appendChild(canvas);
+    div.onclick = () => loadSample(i);
+    grid.appendChild(div);
+    setTimeout(() => drawSampleFundus(canvas, s.dr), 50);
+  });
+}
+
+function loadSample(idx) {
+  document.querySelectorAll('.sample-img').forEach(s => s.classList.remove('active'));
+  document.getElementById(`sample-${idx}`).classList.add('active');
+
+  const s = SAMPLES[idx];
+  // Draw fundus into a fake canvas and use as image
+  const tmpCanvas = document.createElement('canvas');
+  tmpCanvas.width = tmpCanvas.height = 512;
+  drawSampleFundus(tmpCanvas, s.dr);
+
+  const img = new Image();
+  img.src = tmpCanvas.toDataURL();
+  img.onload = () => {
+    uploadedImage = img;
+    document.getElementById('fundusImg').src = img.src;
+    document.getElementById('fundusPreview').classList.add('visible');
+    document.getElementById('previewControls').style.display = 'flex';
+    document.getElementById('runBtn').disabled = false;
+  };
+
+  // Auto-run with sample data
+  const drProbs  = Array(5).fill(0.02);
+  drProbs[s.dr] = 0.82 + Math.random() * 0.1;
+  const dmeProbs = Array(3).fill(0.04);
+  dmeProbs[s.dme] = 0.84 + Math.random() * 0.1;
+
+  setTimeout(() => {
+    displayResults({
+      dr_grade: s.dr, dr_probs: drProbs, dr_label: DR_LABELS[s.dr],
+      dme_grade: s.dme, dme_probs: dmeProbs, dme_label: DME_LABELS[s.dme],
+      lesion_probs: s.lesions,
+      pog_adj: POG_ADJ,
+    });
+  }, 200);
+}
+
+// ══════════════════════════════════════════════
+// FILE UPLOAD
+// ══════════════════════════════════════════════
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) loadImageFile(file);
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.add('drag-over');
+}
+
+function handleDragLeave(e) {
+  document.getElementById('uploadZone').classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) loadImageFile(file);
+}
+
+function loadImageFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.src = e.target.result;
+    img.onload = () => {
+      uploadedImage = img;
+      document.getElementById('fundusImg').src = img.src;
+      document.getElementById('fundusPreview').classList.add('visible');
+      document.getElementById('previewControls').style.display = 'flex';
+      document.getElementById('runBtn').disabled = false;
+    };
+  };
+  reader.readAsDataURL(file);
+}
+
+// ══════════════════════════════════════════════
+// OVERLAY TOGGLE
+// ══════════════════════════════════════════════
+
+function setOverlay(mode) {
+  overlayMode = mode;
+  ['btnOriginal','btnHeatmap','btnBlend'].forEach(id =>
+    document.getElementById(id).classList.remove('active')
+  );
+  const map = {original:'btnOriginal',heatmap:'btnHeatmap',blend:'btnBlend'};
+  document.getElementById(map[mode]).classList.add('active');
+
+  const canvas = document.getElementById('heatmapCanvas');
+  if (mode === 'original') {
+    canvas.classList.remove('visible');
+    canvas.style.opacity = '0';
+  } else if (mode === 'heatmap') {
+    canvas.classList.add('visible');
+    canvas.style.opacity = '1';
+    canvas.style.mixBlendMode = 'normal';
+  } else {
+    canvas.classList.add('visible');
+    canvas.style.opacity = '0.55';
+    canvas.style.mixBlendMode = 'screen';
+  }
+}
+
+// ══════════════════════════════════════════════
+// INFERENCE (SIMULATED)
+// ══════════════════════════════════════════════
+
+function runInference() {
+  if (!uploadedImage) return;
+
+  const btn     = document.getElementById('runBtn');
+  const spinner = document.getElementById('spinner');
+  const text    = document.getElementById('runBtnText');
+
+  btn.disabled   = true;
+  spinner.style.display = 'block';
+  text.textContent = 'Analysing…';
+
+  // Simulate model inference latency
+  setTimeout(() => {
+    const result = simulateInference();
+    displayResults(result);
+
+    spinner.style.display = 'none';
+    text.textContent = '⚡ Run Inference';
+    btn.disabled = false;
+  }, 1800);
+}
+
+function simulateInference() {
+  // Generate plausible results — in production this calls the Python backend
+  const dr_grade  = Math.floor(Math.random() * 5);
+  const dme_grade = Math.floor(Math.random() * 3);
+
+  // Softmax-like distribution peaking at predicted grade
+  function softDist(n, peak) {
+    const raw = Array(n).fill(0).map((_, i) => Math.exp(-2 * Math.abs(i - peak) + (Math.random() * 0.4)));
+    const sum = raw.reduce((a, b) => a + b);
+    return raw.map(v => v / sum);
+  }
+
+  const dr_probs  = softDist(5, dr_grade);
+  const dme_probs = softDist(3, dme_grade);
+
+  // Lesion probs: correlate with DR grade
+  const lesion_base  = [0.1, 0.08, 0.07, 0.05, 0.02];
+  const lesion_scale = [1 + dr_grade * 0.22, 1 + dr_grade * 0.2,
+                        1 + dr_grade * 0.18, 1 + dr_grade * 0.1,
+                        dr_grade >= 3 ? 0.55 : 0.05];
+  const lesion_probs = lesion_base.map((b, i) =>
+    Math.min(0.99, b * lesion_scale[i] * (0.85 + Math.random() * 0.3))
+  );
+
+  return {
+    dr_grade, dr_probs, dr_label: DR_LABELS[dr_grade],
+    dme_grade, dme_probs, dme_label: DME_LABELS[dme_grade],
+    lesion_probs,
+    pog_adj: POG_ADJ,
+  };
+}
+
+// ══════════════════════════════════════════════
+// DISPLAY RESULTS
+// ══════════════════════════════════════════════
+
+function displayResults(result) {
+  currentResult = result;
+
+  document.getElementById('placeholder').style.display  = 'none';
+  document.getElementById('results-area').classList.add('visible');
+
+  renderReferral(result.dr_grade, result.dme_grade);
+  renderGrades(result);
+  renderLesions(result.lesion_probs);
+  renderConfidenceBars(result);
+  renderPOG(result.pog_adj, result.lesion_probs);
+  renderAttentionMap(result.dr_grade);
+  renderHeatmapOnImage(result);
+}
+
+// ── REFERRAL ──
+function renderReferral(drG, dmeG) {
+  const key    = `${Math.min(drG,4)},${Math.min(dmeG,2)}`;
+  const [msg, icon, colour] = REFERRAL_MAP[key] || ['Urgent referral','🔴','red'];
+
+  const banner = document.getElementById('referralBanner');
+  banner.className = `referral-banner ref-${colour}`;
+  document.getElementById('referralIcon').textContent  = icon;
+  document.getElementById('referralTitle').textContent = msg;
+  document.getElementById('referralSub').textContent   =
+    `DR Grade ${drG} (${DR_LABELS[drG]}) · DME Grade ${dmeG} (${DME_LABELS[dmeG]})`;
+}
+
+// ── GRADES ──
+function renderGrades(result) {
+  // DR
+  document.getElementById('drGradeVal').textContent  = `Grade ${result.dr_grade}`;
+  document.getElementById('drGradeVal').style.color  = DR_COLORS[result.dr_grade];
+  document.getElementById('drGradeName').textContent = result.dr_label;
+
+  const drBars = document.getElementById('drGradeBars');
+  drBars.innerHTML = result.dr_probs.map((p, i) => `
+    <div class="grade-bar-row">
+      <div class="grade-bar-label">Grade ${i}</div>
+      <div class="grade-bar-track">
+        <div class="grade-bar-fill" style="width:${(p*100).toFixed(1)}%;background:${DR_COLORS[i]};"></div>
+      </div>
+      <div class="grade-bar-val" style="color:${DR_COLORS[i]}">${(p*100).toFixed(0)}%</div>
+    </div>
+  `).join('');
+
+  // DME
+  document.getElementById('dmeGradeVal').textContent  = `Grade ${result.dme_grade}`;
+  document.getElementById('dmeGradeVal').style.color  = DME_COLORS[result.dme_grade];
+  document.getElementById('dmeGradeName').textContent = result.dme_label;
+
+  const dmeBars = document.getElementById('dmeGradeBars');
+  dmeBars.innerHTML = result.dme_probs.map((p, i) => `
+    <div class="grade-bar-row">
+      <div class="grade-bar-label">Grade ${i}</div>
+      <div class="grade-bar-track">
+        <div class="grade-bar-fill" style="width:${(p*100).toFixed(1)}%;background:${DME_COLORS[i]};"></div>
+      </div>
+      <div class="grade-bar-val" style="color:${DME_COLORS[i]}">${(p*100).toFixed(0)}%</div>
+    </div>
+  `).join('');
+}
+
+// ── LESIONS ──
+function renderLesions(lesionProbs) {
+  const circumference = 2 * Math.PI * 20;
+  document.getElementById('lesionGrid').innerHTML = lesionProbs.map((prob, i) => {
+    const offset  = circumference * (1 - prob);
+    const detected = prob >= 0.5;
+    const cls      = detected ? 'detected' : (prob >= 0.25 ? '' : 'low');
+    return `
+      <div class="lesion-card ${cls}">
+        <div class="lesion-ring">
+          <svg viewBox="0 0 52 52">
+            <circle class="ring-bg-l" cx="26" cy="26" r="20"/>
+            <circle class="ring-fg-l" cx="26" cy="26" r="20"
+              stroke="${LESION_COLORS[i]}"
+              stroke-dasharray="${circumference.toFixed(2)}"
+              stroke-dashoffset="${offset.toFixed(2)}"/>
+          </svg>
+          <div class="ring-text" style="color:${LESION_COLORS[i]}">${Math.round(prob*100)}%</div>
+        </div>
+        <div class="lesion-name">${LESION_ABBR[i]}<br>${LESION_NAMES[i].split(' ').slice(-1)[0]}</div>
+        <div style="font-size:0.65rem;font-weight:700;color:${detected?'#ef4444':'#10b981'}">
+          ${detected ? '● Detected' : '○ Not detected'}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── CONFIDENCE BARS ──
+function renderConfidenceBars(result) {
+  const el = document.getElementById('confBars');
+  const items = [
+    { label: 'DR Grade confidence', val: Math.max(...result.dr_probs),  color: DR_COLORS[result.dr_grade] },
+    { label: 'DME Grade confidence', val: Math.max(...result.dme_probs), color: DME_COLORS[result.dme_grade] },
+    ...result.lesion_probs.map((p, i) => ({
+      label: LESION_NAMES[i],
+      val: p,
+      color: LESION_COLORS[i],
+    })),
+  ];
+  el.innerHTML = items.map(item => `
+    <div class="conf-bar-row">
+      <div class="conf-bar-label">${item.label}</div>
+      <div class="conf-bar-track">
+        <div class="conf-bar-fill" style="width:${(item.val*100).toFixed(1)}%;background:${item.color};"></div>
+      </div>
+      <div class="conf-bar-val" style="color:${item.color}">${(item.val*100).toFixed(1)}%</div>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════
+// POG VISUALISATION
+// ══════════════════════════════════════════════
+
+function renderPOG(adj, lesionProbs) {
+  const canvas = document.getElementById('pog-canvas');
+  const W = canvas.offsetWidth || 300;
+  const H = 240;
+  canvas.width  = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#161f2c';
+  ctx.fillRect(0, 0, W, H);
+
+  const K = 5;
+  // Pentagon layout
+  const cx = W / 2, cy = H / 2, radius = Math.min(W, H) * 0.35;
+  const nodes = Array.from({length: K}, (_, i) => {
+    const angle = (i / K) * Math.PI * 2 - Math.PI / 2;
+    return { x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius };
+  });
+
+  // Draw edges
+  for (let i = 0; i < K; i++) {
+    for (let j = i + 1; j < K; j++) {
+      const w = adj[i][j];
+      if (w < 0.1) continue;
+      ctx.beginPath();
+      ctx.moveTo(nodes[i].x, nodes[i].y);
+      ctx.lineTo(nodes[j].x, nodes[j].y);
+      ctx.strokeStyle = `rgba(96,165,250,${w * 0.7})`;
+      ctx.lineWidth   = w * 4;
+      ctx.stroke();
+    }
+  }
+
+  // Draw nodes
+  nodes.forEach((n, i) => {
+    const detected = lesionProbs[i] >= 0.5;
+    const nodeR    = 20 + (lesionProbs[i] * 10);
+
+    // Glow for detected
+    if (detected) {
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, nodeR + 6, 0, Math.PI * 2);
+      ctx.fillStyle = LESION_COLORS[i] + '33';
+      ctx.fill();
+    }
+
+    // Node circle
+    const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, nodeR);
+    grd.addColorStop(0, LESION_COLORS[i] + 'cc');
+    grd.addColorStop(1, LESION_COLORS[i] + '44');
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, nodeR, 0, Math.PI * 2);
+    ctx.fillStyle = grd;
+    ctx.fill();
+    ctx.strokeStyle = detected ? LESION_COLORS[i] : 'rgba(255,255,255,0.15)';
+    ctx.lineWidth   = detected ? 2 : 1;
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle = '#fff';
+    ctx.font      = 'bold 9px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(LESION_ABBR[i], n.x, n.y - 4);
+    ctx.font = '8px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillText(`${Math.round(lesionProbs[i]*100)}%`, n.x, n.y + 6);
+  });
+
+  // Legend
+  const legend = document.getElementById('pogLegend');
+  legend.innerHTML = LESION_NAMES.map((name, i) => `
+    <div class="pog-legend-item">
+      <div class="pog-dot" style="background:${LESION_COLORS[i]};"></div>
+      ${LESION_ABBR[i]}: ${name}
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════
+// ATTENTION MAP (SIMULATED GRADCAM++)
+// ══════════════════════════════════════════════
+
+function switchAttnTab(type, el) {
+  document.querySelectorAll('.attn-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  currentAttnTab = type;
+  if (currentResult) renderAttentionMap(currentResult.dr_grade);
+}
+
+function renderAttentionMap(drGrade) {
+  const canvas = document.getElementById('attention-canvas');
+  const W = canvas.offsetWidth || 400;
+  const H = 280;
+  canvas.width  = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // Draw base fundus (dark circle)
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+
+  const cx = W / 2, cy = H / 2;
+  const r  = Math.min(W, H) * 0.45;
+
+  const bgGrd = ctx.createRadialGradient(cx, cy, r * 0.1, cx, cy, r);
+  bgGrd.addColorStop(0, '#3a1800');
+  bgGrd.addColorStop(1, '#060100');
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = bgGrd;
+  ctx.fill();
+
+  // Simulate attention hotspots based on tab
+  const hotspots = getHotspots(currentAttnTab, cx, cy, r, drGrade);
+
+  hotspots.forEach(h => {
+    const grd = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, h.r);
+    grd.addColorStop(0, `rgba(${h.rgb},${h.alpha})`);
+    grd.addColorStop(0.5, `rgba(${h.rgb},${h.alpha * 0.5})`);
+    grd.addColorStop(1,   `rgba(${h.rgb},0)`);
+    ctx.beginPath();
+    ctx.arc(h.x, h.y, h.r, 0, Math.PI * 2);
+    ctx.fillStyle = grd;
+    ctx.fill();
+  });
+
+  // OD marker
+  const odX = cx + r * 0.35, odY = cy;
+  ctx.beginPath();
+  ctx.arc(odX, odY, r * 0.1, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,220,100,0.7)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255,220,100,0.15)';
+  ctx.fill();
+
+  // Fovea marker
+  ctx.beginPath();
+  ctx.arc(cx - r * 0.05, cy, 4, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(200,200,255,0.7)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Legend
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(6, H - 28, 120, 22);
+  ctx.fillStyle = 'rgba(255,220,100,0.8)';
+  ctx.font = '9px Inter, sans-serif';
+  ctx.fillText('○ Optic Disc  · Fovea', 10, H - 13);
+}
+
+function getHotspots(tab, cx, cy, r, drGrade) {
+  const rand = (min, max) => min + Math.random() * (max - min);
+  const base = drGrade + 1;
+
+  const configs = {
+    dr: { rgb: '255,80,80',  count: base * 3 },
+    dme:{ rgb: '255,200,50', count: base * 2, nearFovea: true },
+    ma: { rgb: '255,50,50',  count: base * 4, small: true },
+    he: { rgb: '255,120,30', count: base * 3 },
+    ex: { rgb: '255,230,30', count: base * 3, nearFovea: true },
+  };
+
+  const cfg = configs[tab] || configs.dr;
+  const hotspots = [];
+
+  for (let i = 0; i < cfg.count; i++) {
+    const angle = rand(0, Math.PI * 2);
+    const dist  = cfg.nearFovea ? rand(0, r * 0.3) : rand(r * 0.1, r * 0.8);
+    hotspots.push({
+      x: cx + Math.cos(angle) * dist,
+      y: cy + Math.sin(angle) * dist,
+      r: cfg.small ? rand(12, 25) : rand(20, 50),
+      rgb: cfg.rgb,
+      alpha: rand(0.3, 0.7),
+    });
+  }
+  return hotspots;
+}
+
+// ══════════════════════════════════════════════
+// HEATMAP ON FUNDUS IMAGE
+// ══════════════════════════════════════════════
+
+function renderHeatmapOnImage(result) {
+  const img    = document.getElementById('fundusImg');
+  const canvas = document.getElementById('heatmapCanvas');
+  if (!img.complete) { img.onload = () => renderHeatmapOnImage(result); return; }
+
+  canvas.width  = img.naturalWidth  || img.width;
+  canvas.height = img.naturalHeight || img.height;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const W = canvas.width, H = canvas.height;
+  const cx = W / 2, cy = H / 2;
+  const r  = Math.min(W, H) * 0.45;
+
+  // Generate heatmap patches (32×32 grid mimicking ViT patches)
+  const n = 32;
+  const pw = W / n, ph = H / n;
+
+  for (let row = 0; row < n; row++) {
+    for (let col = 0; col < n; col++) {
+      const px = (col + 0.5) * pw, py = (row + 0.5) * ph;
+      const dist = Math.hypot(px - cx, py - cy);
+      if (dist > r) continue;   // outside fundus
+
+      // Attention score based on DR grade + position
+      const normalDist = dist / r;
+      const base = Math.max(0, 1 - normalDist * 1.2) * result.dr_grade * 0.25;
+      const noise = Math.random() * 0.15;
+      const score = Math.min(1, base + noise);
+
+      if (score < 0.05) continue;
+
+      // Jet colormap
+      const rv = Math.min(1, Math.max(0, 1.5 - Math.abs(4 * score - 3)));
+      const gv = Math.min(1, Math.max(0, 1.5 - Math.abs(4 * score - 2)));
+      const bv = Math.min(1, Math.max(0, 1.5 - Math.abs(4 * score - 1)));
+
+      ctx.fillStyle = `rgba(${Math.round(rv*255)},${Math.round(gv*255)},${Math.round(bv*255)},${score * 0.8})`;
+      ctx.fillRect(col * pw, row * ph, pw, ph);
+    }
+  }
+}
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', () => {
+  initSampleGrid();
+  // Auto-load first sample
+  setTimeout(() => loadSample(1), 300);
+});
+</script>
+</body>
+</html>

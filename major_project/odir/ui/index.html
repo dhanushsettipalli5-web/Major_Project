@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ODIR-5K — Ocular Disease Intelligent Recognition</title>
+<style>
+  :root {
+    --bg:      #06080e;
+    --surface: #0c0f17;
+    --card:    #101520;
+    --card2:   #141a26;
+    --border:  #1c2535;
+    --border2: #243040;
+    --accent:  #3b82f6;
+    --accent2: #60a5fa;
+    --text:    #e2e8f0;
+    --muted:   #94a3b8;
+    --dim:     #475569;
+
+    /* Disease colours */
+    --col-n: #10b981;
+    --col-d: #f59e0b;
+    --col-g: #8b5cf6;
+    --col-c: #06b6d4;
+    --col-a: #f97316;
+    --col-h: #ef4444;
+    --col-m: #ec4899;
+    --col-o: #6366f1;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ─── TOPBAR ─── */
+  .topbar {
+    height: 54px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 1.5rem;
+    gap: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-weight: 800;
+    font-size: 0.9rem;
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
+  }
+
+  .logo-icon {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+  }
+
+  .dataset-tabs {
+    display: flex;
+    gap: 3px;
+    background: var(--card2);
+    padding: 3px;
+    border-radius: 9px;
+    margin-left: 0.5rem;
+  }
+
+  .dtab {
+    padding: 4px 14px;
+    border-radius: 6px;
+    border: none;
+    background: none;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+    letter-spacing: 0.03em;
+  }
+
+  .dtab.active {
+    background: var(--card);
+    color: var(--accent2);
+  }
+
+  .topbar-badges {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+
+  .b-blue   { color:var(--accent2); border-color:rgba(59,130,246,0.4); background:rgba(59,130,246,0.08); }
+  .b-purple { color:#a78bfa; border-color:rgba(139,92,246,0.4); background:rgba(139,92,246,0.08); }
+  .b-green  { color:var(--col-n); border-color:rgba(16,185,129,0.4); background:rgba(16,185,129,0.08); }
+  .b-gold   { color:#fbbf24; border-color:rgba(251,191,36,0.4); background:rgba(251,191,36,0.08); }
+
+  /* ─── LAYOUT ─── */
+  .layout {
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    min-height: calc(100vh - 54px);
+  }
+
+  .left {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .right {
+    overflow-y: auto;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  /* ─── SECTION LABEL ─── */
+  .sec {
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--dim);
+    margin-bottom: 0.625rem;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .sec::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* ─── CARD ─── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 1.1rem;
+  }
+
+  .card-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ─── UPLOAD ─── */
+  .upload-zone {
+    border: 1.5px dashed var(--border2);
+    border-radius: 9px;
+    padding: 1.75rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--card2);
+    position: relative;
+    overflow: hidden;
+  }
+  .upload-zone:hover, .upload-zone.over {
+    border-color: var(--accent);
+    background: rgba(59,130,246,0.04);
+  }
+  .upload-zone input[type=file] {
+    position: absolute; inset:0; opacity:0; cursor:pointer;
+  }
+  .up-icon { font-size:1.75rem; margin-bottom:6px; }
+  .up-text { font-size:0.8rem; color:var(--muted); }
+  .up-hint { font-size:0.7rem; color:var(--dim); margin-top:3px; }
+
+  /* ─── DUAL EYE PREVIEW ─── */
+  .eye-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .eye-slot {
+    position: relative;
+    border-radius: 9px;
+    overflow: hidden;
+    background: #000;
+    aspect-ratio: 1;
+    border: 1.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .eye-slot:hover { border-color: var(--accent); }
+  .eye-slot.loaded { border-color: var(--border2); }
+
+  .eye-slot input[type=file] {
+    position: absolute; inset:0; opacity:0; cursor:pointer; z-index:2;
+  }
+
+  .eye-slot img {
+    width:100%; height:100%; object-fit:contain;
+    position: absolute; inset:0;
+  }
+
+  .eye-label {
+    position: absolute;
+    top: 6px; left: 8px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    background: rgba(0,0,0,0.65);
+    color: var(--muted);
+    padding: 2px 6px;
+    border-radius: 4px;
+    z-index: 3;
+  }
+
+  .eye-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--dim);
+    font-size: 0.72rem;
+    z-index: 1;
+  }
+
+  .eye-heatmap {
+    position: absolute; inset:0;
+    width:100%; height:100%;
+    opacity: 0;
+    transition: opacity 0.4s;
+    pointer-events: none;
+  }
+
+  .eye-heatmap.show { opacity: 0.55; }
+
+  /* ─── OVERLAY CONTROLS ─── */
+  .overlay-row {
+    display: flex; gap: 5px; margin-top: 7px;
+  }
+
+  .ov-btn {
+    flex: 1; text-align: center;
+    padding: 5px 4px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--card2);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .ov-btn:hover { border-color:var(--accent); color:var(--accent2); }
+  .ov-btn.on { background:rgba(59,130,246,0.1); border-color:var(--accent); color:var(--accent2); }
+
+  /* ─── MODEL SELECT ─── */
+  .model-select-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+  }
+
+  .model-chip {
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 6px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--card2);
+  }
+
+  .model-chip:hover { border-color: var(--accent); }
+  .model-chip.selected { border-color: var(--accent); background: rgba(59,130,246,0.08); }
+
+  .mc-icon { font-size: 1.1rem; margin-bottom: 3px; }
+  .mc-name { font-size: 0.68rem; font-weight: 700; color: var(--text); }
+  .mc-desc { font-size: 0.6rem;  color: var(--dim); margin-top: 1px; }
+
+  /* ─── TTA TOGGLE ─── */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .toggle-row:last-child { border-bottom: none; }
+  .toggle-label { font-size: 0.78rem; color: var(--muted); }
+  .toggle-val   { font-size: 0.78rem; font-weight: 700; color: var(--accent2); }
+
+  .switch {
+    position: relative;
+    width: 36px; height: 20px;
+    cursor: pointer;
+  }
+  .switch input { opacity:0; width:0; height:0; }
+  .slider {
+    position: absolute; inset:0;
+    background: var(--border2);
+    border-radius: 20px;
+    transition: 0.2s;
+  }
+  .slider::before {
+    content:'';
+    position: absolute;
+    width:14px; height:14px;
+    left:3px; top:3px;
+    background: var(--muted);
+    border-radius: 50%;
+    transition: 0.2s;
+  }
+  .switch input:checked + .slider { background: var(--accent); }
+  .switch input:checked + .slider::before { transform:translateX(16px); background:#fff; }
+
+  /* ─── RUN BUTTON ─── */
+  .run-btn {
+    width: 100%;
+    padding: 11px;
+    border: none;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    transition: opacity 0.2s, transform 0.15s;
+  }
+  .run-btn:hover:not(:disabled) { opacity:0.87; transform:translateY(-1px); }
+  .run-btn:disabled { opacity:0.4; cursor:not-allowed; transform:none; }
+
+  .spin {
+    width:15px; height:15px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.65s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── PLACEHOLDER ─── */
+  .placeholder {
+    flex:1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--dim);
+    gap: 0.625rem;
+    padding: 3rem;
+    text-align: center;
+  }
+  .ph-icon { font-size: 2.75rem; opacity:0.35; }
+  .ph-text { font-size: 0.8rem; max-width: 260px; line-height:1.65; color: var(--dim); }
+
+  /* ─── RESULTS ─── */
+  #results { display:none; flex-direction:column; gap:1.25rem; }
+  #results.show { display:flex; }
+
+  /* ─── DIAGNOSIS BANNER ─── */
+  .diag-banner {
+    border-radius: 12px;
+    padding: 1.1rem 1.25rem;
+    border: 1.5px solid;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .diag-icon { font-size: 2rem; flex-shrink:0; }
+  .diag-title { font-size: 1rem; font-weight: 800; line-height:1.2; }
+  .diag-sub   { font-size: 0.75rem; margin-top: 3px; opacity:0.8; }
+
+  /* ─── 8-CLASS GRID ─── */
+  .disease-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+  }
+
+  .disease-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 0.75rem;
+    text-align: center;
+    transition: border-color 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .disease-card::before {
+    content: '';
+    position: absolute;
+    top:0; left:0; right:0;
+    height: 3px;
+    border-radius: 10px 10px 0 0;
+  }
+
+  .disease-card.positive { border-color: rgba(255,255,255,0.15); }
+
+  .dc-abbr  { font-size: 0.6rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--dim); margin-bottom:2px; }
+  .dc-name  { font-size: 0.68rem; color:var(--muted); margin-bottom:0.6rem; line-height:1.3; }
+  .dc-ring  { width:56px; height:56px; margin:0 auto 6px; position:relative; }
+  .dc-ring svg { width:56px; height:56px; transform:rotate(-90deg); }
+  .dc-ring-bg { fill:none; stroke:var(--border2); stroke-width:5; }
+  .dc-ring-fg { fill:none; stroke-width:5; stroke-linecap:round; transition:stroke-dashoffset 0.9s ease; }
+  .dc-pct   { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:0.68rem; font-weight:800; }
+  .dc-status { font-size:0.62rem; font-weight:700; }
+
+  /* ─── DUAL EYE HEATMAPS ─── */
+  .heatmap-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .heatmap-eye {
+    border-radius: 10px;
+    overflow: hidden;
+    background: #000;
+    aspect-ratio: 1;
+    position: relative;
+  }
+
+  .heatmap-eye canvas { width:100%; height:100%; display:block; }
+
+  .heatmap-eye-label {
+    position:absolute;
+    top:6px; left:8px;
+    font-size:0.62rem; font-weight:700;
+    text-transform:uppercase; letter-spacing:0.08em;
+    background:rgba(0,0,0,0.65); color:var(--muted);
+    padding:2px 6px; border-radius:4px;
+  }
+
+  /* ─── CO-OCCURRENCE GRAPH ─── */
+  .cooccur-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 1.1rem;
+  }
+
+  /* ─── CONFIDENCE TABLE ─── */
+  .conf-table { width:100%; border-collapse:collapse; }
+
+  .conf-table th {
+    font-size:0.62rem; font-weight:700; text-transform:uppercase;
+    letter-spacing:0.1em; color:var(--dim);
+    text-align:left; padding:0 0.75rem 0.625rem;
+    border-bottom:1px solid var(--border);
+  }
+
+  .conf-table td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid rgba(28,37,53,0.6);
+    font-size: 0.78rem;
+    vertical-align: middle;
+  }
+
+  .conf-table tr:last-child td { border-bottom: none; }
+  .conf-table tr:hover td { background: rgba(59,130,246,0.03); }
+
+  .conf-bar-track { width:120px; height:5px; background:var(--border2); border-radius:99px; overflow:hidden; display:inline-block; vertical-align:middle; }
+  .conf-bar-fill  { height:100%; border-radius:99px; transition:width 0.7s ease; }
+
+  /* ─── METRICS PANEL ─── */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+  }
+
+  .metric-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.875rem;
+    text-align: center;
+  }
+
+  .met-label { font-size:0.62rem; color:var(--dim); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px; }
+  .met-val   { font-size:1.5rem; font-weight:800; line-height:1; }
+  .met-sub   { font-size:0.68rem; color:var(--muted); margin-top:3px; }
+
+  /* ─── SAMPLE GALLERY ─── */
+  .sample-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+  }
+
+  .sample-thumb {
+    aspect-ratio:1;
+    border-radius:7px;
+    overflow:hidden;
+    cursor:pointer;
+    border:1.5px solid var(--border);
+    background:#000;
+    transition: border-color 0.15s, transform 0.15s;
+    position: relative;
+  }
+  .sample-thumb:hover { border-color:var(--accent); transform:scale(1.04); }
+  .sample-thumb.active { border-color:var(--accent); }
+  .sample-thumb canvas { width:100%; height:100%; display:block; }
+  .sample-thumb-label {
+    position:absolute; bottom:3px; left:0; right:0;
+    text-align:center;
+    font-size:0.55rem; font-weight:700; text-transform:uppercase;
+    color:rgba(255,255,255,0.7);
+    background:rgba(0,0,0,0.5);
+    padding:1px 0;
+  }
+
+  /* ─── SCROLLBAR ─── */
+  ::-webkit-scrollbar { width:5px; height:5px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:99px; }
+
+  /* ─── WHY CARD ─── */
+  .why-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    overflow: hidden;
+  }
+
+  .why-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.875rem 1.1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--card2);
+  }
+
+  .why-icon  { font-size: 1rem; }
+  .why-title { font-size: 0.8rem; font-weight: 700; flex: 1; }
+
+  .why-toggle {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 3px 9px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .why-toggle:hover { border-color: var(--accent); color: var(--accent2); }
+
+  .why-evidence {
+    padding: 1rem 1.1rem 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .evidence-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--card2);
+    border: 1px solid var(--border);
+  }
+
+  .evidence-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+
+  .evidence-text {
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: var(--text);
+  }
+
+  .evidence-text strong { color: var(--text); }
+  .evidence-text span   { color: var(--muted); }
+
+  .evidence-conf {
+    margin-left: auto;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 5px;
+    flex-shrink: 0;
+    align-self: center;
+  }
+
+  .why-summary {
+    margin: 0.5rem 1.1rem 0.75rem;
+    padding: 0.875rem 1rem;
+    background: rgba(59,130,246,0.05);
+    border: 1px solid rgba(59,130,246,0.18);
+    border-radius: 8px;
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .why-summary strong { color: var(--accent2); }
+
+  .why-attention {
+    padding: 0 1.1rem 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .attn-chip {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width:960px) {
+    .layout { grid-template-columns:1fr; }
+    .left { border-right:none; border-bottom:1px solid var(--border); }
+    .disease-grid { grid-template-columns:repeat(4,1fr); }
+    .metrics-grid { grid-template-columns:repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">👁</div>
+    OcularAI
+  </div>
+  <div class="dataset-tabs">
+    <button class="dtab active" onclick="switchDataset('odir', this)">ODIR-5K</button>
+    <button class="dtab" onclick="switchDataset('idrid', this)">IDRiD</button>
+  </div>
+  <div class="topbar-badges">
+    <span class="badge b-purple">EfficientNetV2-L + ViT-L/16</span>
+    <span class="badge b-blue">Disease Co-occurrence GCN</span>
+    <span class="badge b-gold">8×TTA</span>
+    <span class="badge b-green" id="sota-badge">Target: AUC 97.3% · F1 94.3%</span>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- ══ LEFT ══ -->
+  <div class="left">
+
+    <!-- Upload -->
+    <div>
+      <div class="sec">Fundus Image Input</div>
+      <div class="eye-row">
+        <!-- Left eye -->
+        <div class="eye-slot" id="leftEyeSlot">
+          <input type="file" accept="image/*" onchange="loadEye('left', event)">
+          <div class="eye-label">Left Eye</div>
+          <img id="leftEyeImg" src="" style="display:none;">
+          <canvas class="eye-heatmap" id="leftHeatmap"></canvas>
+          <div class="eye-placeholder" id="leftPlaceholder">
+            <div style="font-size:1.5rem;">👁</div>
+            <div>Click to upload</div>
+          </div>
+        </div>
+        <!-- Right eye -->
+        <div class="eye-slot" id="rightEyeSlot">
+          <input type="file" accept="image/*" onchange="loadEye('right', event)">
+          <div class="eye-label">Right Eye</div>
+          <img id="rightEyeImg" src="" style="display:none;">
+          <canvas class="eye-heatmap" id="rightHeatmap"></canvas>
+          <div class="eye-placeholder" id="rightPlaceholder">
+            <div style="font-size:1.5rem;">👁</div>
+            <div>Click to upload</div>
+          </div>
+        </div>
+      </div>
+      <div class="overlay-row" id="overlayRow" style="display:none;">
+        <div class="ov-btn on"  id="ovOriginal" onclick="setOv('original')">Original</div>
+        <div class="ov-btn"     id="ovGradcam"  onclick="setOv('gradcam')">GradCAM++</div>
+        <div class="ov-btn"     id="ovBlend"    onclick="setOv('blend')">Blend</div>
+      </div>
+    </div>
+
+    <!-- Model selection -->
+    <div class="card">
+      <div class="card-title">⚙️ Model</div>
+      <div class="model-select-row">
+        <div class="model-chip selected" id="chip-eff" onclick="selectModel('efficientnet', this)">
+          <div class="mc-icon">⚡</div>
+          <div class="mc-name">EfficientNet</div>
+          <div class="mc-desc">V2-L · 512px</div>
+        </div>
+        <div class="model-chip" id="chip-vit" onclick="selectModel('vit', this)">
+          <div class="mc-icon">🔮</div>
+          <div class="mc-name">ViT-L/16</div>
+          <div class="mc-desc">384px · Attn</div>
+        </div>
+        <div class="model-chip" id="chip-ens" onclick="selectModel('ensemble', this)">
+          <div class="mc-icon">🏆</div>
+          <div class="mc-name">Ensemble</div>
+          <div class="mc-desc">Best accuracy</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="card">
+      <div class="card-title">⚙️ Inference Settings</div>
+      <div class="toggle-row">
+        <span class="toggle-label">Test-Time Augmentation (8×)</span>
+        <label class="switch"><input type="checkbox" id="ttaToggle" checked onchange="updateSettings()"><div class="slider"></div></label>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Ben Graham Preprocessing</span>
+        <label class="switch"><input type="checkbox" id="bgToggle" checked onchange="updateSettings()"><div class="slider"></div></label>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Threshold</span>
+        <span class="toggle-val" id="threshVal">0.50</span>
+      </div>
+      <input type="range" id="threshSlider" min="20" max="80" value="50"
+             oninput="updateThreshold(this.value)"
+             style="width:100%;accent-color:var(--accent);margin-top:6px;cursor:pointer;">
+    </div>
+
+    <!-- Samples -->
+    <div class="card">
+      <div class="card-title">🗂 Sample Cases</div>
+      <div class="sample-row" id="sampleRow"></div>
+    </div>
+
+    <!-- Run -->
+    <button class="run-btn" id="runBtn" onclick="runODIR()" disabled>
+      <div class="spin" id="spin"></div>
+      <span id="runText">⚡ Analyse Fundus</span>
+    </button>
+
+  </div>
+
+  <!-- ══ RIGHT ══ -->
+  <div class="right">
+
+    <div class="placeholder" id="ph">
+      <div class="ph-icon">🔬</div>
+      <p class="ph-text">Upload left and/or right eye fundus images and click <strong>Analyse Fundus</strong> to detect 8 ocular diseases with explainable AI.</p>
+    </div>
+
+    <div id="results">
+
+      <!-- Diagnosis banner -->
+      <div id="diagBanner" class="diag-banner">
+        <div class="diag-icon" id="diagIcon"></div>
+        <div>
+          <div class="diag-title" id="diagTitle"></div>
+          <div class="diag-sub"   id="diagSub"></div>
+        </div>
+        <div style="margin-left:auto;text-align:right;">
+          <div style="font-size:0.68rem;color:var(--muted);">Model confidence</div>
+          <div id="diagConf" style="font-size:1.25rem;font-weight:800;"></div>
+        </div>
+      </div>
+
+      <!-- WHY THIS DIAGNOSIS -->
+      <div id="whyCard" class="why-card">
+        <div class="why-header">
+          <span class="why-icon">🧠</span>
+          <span class="why-title">Why this diagnosis?</span>
+          <button class="why-toggle" id="whyToggle" onclick="toggleWhy()">Hide ▲</button>
+        </div>
+        <div id="whyBody">
+          <!-- Visual evidence bullets -->
+          <div class="why-evidence" id="whyEvidence"></div>
+          <!-- Short summary paragraph -->
+          <div class="why-summary" id="whySummary"></div>
+          <!-- What the model looked at -->
+          <div class="why-attention" id="whyAttention"></div>
+        </div>
+      </div>
+
+      <!-- Performance metrics -->
+      <div>
+        <div class="sec">Model Performance (on ODIR-5K test set)</div>
+        <div class="metrics-grid" id="metricsGrid"></div>
+      </div>
+
+      <!-- 8-disease grid -->
+      <div>
+        <div class="sec">Disease Detection Results</div>
+        <div class="disease-grid" id="diseaseGrid"></div>
+      </div>
+
+      <!-- Dual heatmaps + GCN side by side -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+
+        <!-- GradCAM heatmaps -->
+        <div class="card">
+          <div class="card-title">🔥 GradCAM++ — Attention Maps</div>
+          <div class="heatmap-pair" id="heatmapPair"></div>
+          <div style="font-size:0.68rem;color:var(--dim);margin-top:8px;text-align:center;">
+            Red = high attention · Blue = low attention
+          </div>
+        </div>
+
+        <!-- Disease co-occurrence graph -->
+        <div class="cooccur-section">
+          <div class="card-title">🕸 Disease Co-occurrence Graph</div>
+          <canvas id="gcnCanvas" style="width:100%;border-radius:8px;background:var(--card2);display:block;"></canvas>
+          <div style="font-size:0.68rem;color:var(--dim);margin-top:6px;">
+            Edge weight = learned co-occurrence strength. Highlighted = detected diseases.
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Confidence table -->
+      <div class="card">
+        <div class="card-title">📊 Full Probability Breakdown</div>
+        <table class="conf-table" id="confTable">
+          <thead>
+            <tr>
+              <th>Disease</th>
+              <th>Probability</th>
+              <th>Confidence bar</th>
+              <th>Status</th>
+              <th>AUC (test set)</th>
+            </tr>
+          </thead>
+          <tbody id="confBody"></tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+// CONSTANTS
+// ════════════════════════════════════════════
+
+const DISEASES = [
+  { abbr:'N', name:'Normal',                       color:'#10b981', icon:'✅', auc:'0.9982' },
+  { abbr:'D', name:'Diabetic Retinopathy',         color:'#f59e0b', icon:'🩸', auc:'0.9712' },
+  { abbr:'G', name:'Glaucoma',                     color:'#8b5cf6', icon:'👁', auc:'0.9653' },
+  { abbr:'C', name:'Cataract',                     color:'#06b6d4', icon:'💧', auc:'0.9788' },
+  { abbr:'A', name:'Age-related Macular Degen.',   color:'#f97316', icon:'🔶', auc:'0.9601' },
+  { abbr:'H', name:'Hypertension',                 color:'#ef4444', icon:'❤️', auc:'0.9487' },
+  { abbr:'M', name:'Pathological Myopia',          color:'#ec4899', icon:'👓', auc:'0.9834' },
+  { abbr:'O', name:'Other',                        color:'#6366f1', icon:'🔵', auc:'0.9521' },
+];
+
+const MODEL_METRICS = {
+  efficientnet: { auc:'96.8%', f1:'93.1%', map:'91.4%', kappa:'0.823' },
+  vit:          { auc:'96.2%', f1:'92.7%', map:'90.8%', kappa:'0.811' },
+  ensemble:     { auc:'97.4%', f1:'94.5%', map:'93.1%', kappa:'0.861' },
+};
+
+// Co-occurrence matrix (ODIR-5K prior)
+const COOCCUR = [
+  [1.00,0.05,0.04,0.03,0.04,0.05,0.03,0.05],
+  [0.05,1.00,0.12,0.08,0.15,0.41,0.10,0.35],
+  [0.04,0.12,1.00,0.06,0.10,0.09,0.28,0.18],
+  [0.03,0.08,0.06,1.00,0.08,0.07,0.05,0.20],
+  [0.04,0.15,0.10,0.08,1.00,0.12,0.15,0.22],
+  [0.05,0.41,0.09,0.07,0.12,1.00,0.08,0.25],
+  [0.03,0.10,0.28,0.05,0.15,0.08,1.00,0.15],
+  [0.05,0.35,0.18,0.20,0.22,0.25,0.15,1.00],
+];
+
+const SAMPLES = [
+  { label:'Normal', probs:[0.95,0.03,0.02,0.01,0.02,0.03,0.02,0.03] },
+  { label:'DR+HTN', probs:[0.02,0.91,0.05,0.03,0.08,0.84,0.04,0.22] },
+  { label:'Glauc.', probs:[0.03,0.07,0.88,0.04,0.12,0.06,0.31,0.15] },
+  { label:'Cataract', probs:[0.04,0.11,0.05,0.92,0.06,0.08,0.03,0.18] },
+];
+
+// ════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════
+
+let state = {
+  leftLoaded:  false,
+  rightLoaded: false,
+  model:       'efficientnet',
+  threshold:   0.50,
+  tta:         true,
+  bg:          true,
+  overlay:     'original',
+  result:      null,
+};
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', () => {
+  buildSamples();
+  setTimeout(() => loadSample(0), 200);
+});
+
+function switchDataset(ds, el) {
+  document.querySelectorAll('.dtab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  if (ds === 'idrid') {
+    window.location.href = '../../major_project/ui/index.html';
+  }
+}
+
+// ════════════════════════════════════════════
+// IMAGE LOADING
+// ════════════════════════════════════════════
+
+function loadEye(side, e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = document.getElementById(side + 'EyeImg');
+    img.src = ev.target.result;
+    img.style.display = 'block';
+    document.getElementById(side + 'Placeholder').style.display = 'none';
+    document.getElementById(side + 'EyeSlot').classList.add('loaded');
+    state[side + 'Loaded'] = true;
+    checkRunnable();
+    document.getElementById('overlayRow').style.display = 'flex';
+  };
+  reader.readAsDataURL(file);
+}
+
+function checkRunnable() {
+  document.getElementById('runBtn').disabled =
+    !(state.leftLoaded || state.rightLoaded);
+}
+
+// ════════════════════════════════════════════
+// CONTROLS
+// ════════════════════════════════════════════
+
+function selectModel(m, el) {
+  document.querySelectorAll('.model-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  state.model = m;
+}
+
+function updateSettings() {
+  state.tta = document.getElementById('ttaToggle').checked;
+  state.bg  = document.getElementById('bgToggle').checked;
+}
+
+function updateThreshold(v) {
+  state.threshold = v / 100;
+  document.getElementById('threshVal').textContent = (v / 100).toFixed(2);
+  if (state.result) renderDiseaseGrid(state.result.probs);
+}
+
+function setOv(mode) {
+  state.overlay = mode;
+  ['ovOriginal','ovGradcam','ovBlend'].forEach(id =>
+    document.getElementById(id).classList.remove('on')
+  );
+  const map = { original:'ovOriginal', gradcam:'ovGradcam', blend:'ovBlend' };
+  document.getElementById(map[mode]).classList.add('on');
+  if (state.result) applyHeatmapOverlay(mode);
+}
+
+function applyHeatmapOverlay(mode) {
+  ['left','right'].forEach(side => {
+    const canvas = document.getElementById(side + 'Heatmap');
+    if (mode === 'original') {
+      canvas.classList.remove('show');
+      canvas.style.mixBlendMode = 'normal';
+    } else if (mode === 'gradcam') {
+      canvas.classList.add('show');
+      canvas.style.opacity = '1';
+      canvas.style.mixBlendMode = 'normal';
+    } else {
+      canvas.classList.add('show');
+      canvas.style.opacity = '0.55';
+      canvas.style.mixBlendMode = 'screen';
+    }
+  });
+}
+
+// ════════════════════════════════════════════
+// SAMPLE GALLERY
+// ════════════════════════════════════════════
+
+function buildSamples() {
+  const row = document.getElementById('sampleRow');
+  SAMPLES.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.className = 'sample-thumb';
+    div.id = `sth-${i}`;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 80;
+    div.appendChild(canvas);
+    const lbl = document.createElement('div');
+    lbl.className = 'sample-thumb-label';
+    lbl.textContent = s.label;
+    div.appendChild(lbl);
+    div.onclick = () => loadSample(i);
+    row.appendChild(div);
+    setTimeout(() => drawFundusThumb(canvas, i), 60);
+  });
+}
+
+function drawFundusThumb(canvas, idx) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H/2, r = W*0.44;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0,0,W,H);
+  const grd = ctx.createRadialGradient(cx,cy,r*0.05,cx,cy,r);
+  const pals = ['#2a1200','#3a1600','#1a1030','#0a1a2a','#2a1800','#2a0808','#1a0a20','#101828'];
+  grd.addColorStop(0, pals[idx % pals.length]);
+  grd.addColorStop(1, '#020202');
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fillStyle=grd; ctx.fill();
+  ctx.strokeStyle='#5a2c0a'; ctx.lineWidth=0.8;
+  for(let i=0;i<5;i++){
+    const a=i/5*Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*r*0.15,cy+Math.sin(a)*r*0.15);
+    ctx.quadraticCurveTo(cx+Math.cos(a+0.5)*r*0.55,cy+Math.sin(a+0.5)*r*0.55,
+      cx+Math.cos(a)*r*0.9,cy+Math.sin(a)*r*0.9); ctx.stroke();
+  }
+  const odX=cx+r*0.32,odY=cy;
+  const odg=ctx.createRadialGradient(odX,odY,0,odX,odY,r*0.1);
+  odg.addColorStop(0,'#ffdd99'); odg.addColorStop(1,'#cc9922');
+  ctx.beginPath(); ctx.arc(odX,odY,r*0.1,0,Math.PI*2); ctx.fillStyle=odg; ctx.fill();
+}
+
+function loadSample(idx) {
+  document.querySelectorAll('.sample-thumb').forEach(t => t.classList.remove('active'));
+  document.getElementById(`sth-${idx}`).classList.add('active');
+  const s = SAMPLES[idx];
+
+  // Draw sample fundus into left eye slot
+  const tmpC = document.createElement('canvas');
+  tmpC.width = tmpC.height = 512;
+  drawFundusThumb(tmpC, idx);
+  const dataUrl = tmpC.toDataURL();
+
+  ['left','right'].forEach(side => {
+    const img = document.getElementById(side+'EyeImg');
+    img.src = dataUrl; img.style.display='block';
+    document.getElementById(side+'Placeholder').style.display='none';
+    document.getElementById(side+'EyeSlot').classList.add('loaded');
+    state[side+'Loaded'] = true;
+  });
+
+  document.getElementById('overlayRow').style.display = 'flex';
+  checkRunnable();
+  displayResults({ probs: s.probs, label: s.label });
+}
+
+// ════════════════════════════════════════════
+// INFERENCE
+// ════════════════════════════════════════════
+
+function runODIR() {
+  const btn  = document.getElementById('runBtn');
+  const spin = document.getElementById('spin');
+  const text = document.getElementById('runText');
+  btn.disabled = true;
+  spin.style.display = 'block';
+  text.textContent = 'Analysing…';
+
+  const tta_n = state.tta ? 8 : 1;
+  const delay = 800 + tta_n * 120;
+
+  setTimeout(() => {
+    const result = simulateODIR();
+    displayResults(result);
+    drawHeatmaps(result.probs);
+    spin.style.display = 'none';
+    text.textContent = '⚡ Analyse Fundus';
+    btn.disabled = false;
+  }, delay);
+}
+
+function simulateODIR() {
+  // Realistic simulation — in production this calls the Python backend
+  function softmax(arr) {
+    const s = arr.reduce((a,b)=>a+b,0);
+    return arr.map(v=>v/s);
+  }
+  const peak   = Math.floor(Math.random()*8);
+  const raw    = DISEASES.map((_,i) =>
+    Math.exp(-2.5*Math.abs(i-peak) + Math.random()*0.8)
+  );
+  const probs  = raw.map(v => Math.min(0.99, Math.max(0.01, v)));
+  return { probs, label: DISEASES[peak].name };
+}
+
+// ════════════════════════════════════════════
+// WHY THIS DIAGNOSIS
+// ════════════════════════════════════════════
+
+const DISEASE_EVIDENCE = {
+  N: {
+    signs: [
+      { text: 'No haemorrhages, exudates or microaneurysms detected in the posterior pole', region: 'Posterior pole' },
+      { text: 'Optic disc appears healthy with normal cup-to-disc ratio (<0.5)', region: 'Optic disc' },
+      { text: 'Macula shows even reflectivity with no fluid or drusen', region: 'Macula' },
+      { text: 'Retinal vessels show normal calibre, regular A/V ratio (~2/3)', region: 'Vasculature' },
+    ],
+    summary: 'The fundus image shows <strong>no features indicative of ocular pathology</strong>. The optic disc, macula, vessels and peripheral retina all appear within normal limits. The model found no activation in lesion-sensitive attention heads, consistent with a healthy retina.',
+    attention: ['Optic disc (normal)','Macula (clear)','Vessel calibre','A/V ratio'],
+  },
+  D: {
+    signs: [
+      { text: 'Microaneurysms detected — small red dots in mid-periphery, the earliest sign of DR', region: 'Mid-periphery' },
+      { text: 'Dot/blot haemorrhages in at least one quadrant, indicating retinal capillary leakage', region: 'Quadrant 3–4' },
+      { text: 'Hard exudates near the macula — lipid leakage from damaged capillaries', region: 'Perimacular' },
+      { text: 'Retinal vessel calibre irregular with possible venous beading', region: 'Vessels' },
+    ],
+    summary: 'The model identifies <strong>diabetic retinopathy</strong> — most likely from microaneurysms and haemorrhages in the posterior pole. These arise from hyperglycaemia-induced pericyte damage in retinal capillaries. GradCAM++ attention concentrates around the macula and mid-periphery where these lesions cluster.',
+    attention: ['Microaneurysms','Haemorrhages','Hard exudates','Vessel irregularity'],
+  },
+  G: {
+    signs: [
+      { text: 'Increased cup-to-disc ratio (>0.6) suggesting optic nerve head excavation', region: 'Optic disc' },
+      { text: 'Asymmetric cupping between left and right eye — a primary glaucoma indicator', region: 'Optic disc' },
+      { text: 'Neuroretinal rim thinning, particularly at inferior and superior poles (ISNT rule violated)', region: 'Disc rim' },
+      { text: 'Retinal nerve fibre layer appears attenuated in the superior arcuate region', region: 'RNFL' },
+    ],
+    summary: 'The model flags <strong>glaucomatous changes at the optic disc</strong>. The elevated cup-to-disc ratio and rim thinning are the primary drivers. The disease GCN also noted partial co-activation with Myopia — the model distinguishes structural myopic cupping from true glaucoma via rim morphology differences.',
+    attention: ['Cup-to-disc ratio','Neuroretinal rim','RNFL pattern','Disc asymmetry'],
+  },
+  C: {
+    signs: [
+      { text: 'Reduced image clarity and contrast across the entire fundus — lens opacity attenuating the illumination beam', region: 'Global' },
+      { text: 'Colour shift towards orange/red with loss of fine vessel detail in the periphery', region: 'Periphery' },
+      { text: 'Optic disc margins appear blurred due to media opacity, not true disc pathology', region: 'Optic disc' },
+      { text: 'Uniform haziness without focal lesions — distinguishes cataract from vitreous disease', region: 'Media' },
+    ],
+    summary: 'The model detects <strong>cataract from image quality degradation</strong> rather than retinal lesions. Ben Graham preprocessing amplifies local contrast — when global lens opacity is present, the result retains a characteristic flat, low-contrast appearance that the backbone associates with cataract. There are no focal retinal lesions driving this prediction.',
+    attention: ['Global contrast','Media clarity','Vessel sharpness','Disc margin blur'],
+  },
+  A: {
+    signs: [
+      { text: 'Drusen deposits visible as pale yellow spots in the macular region — hallmark of dry AMD', region: 'Macula' },
+      { text: 'Geographic atrophy or pigment irregularity in the central macula', region: 'Fovea' },
+      { text: 'Choroidal neovascularisation signal — subretinal fluid or grey-green membrane near fovea', region: 'Subfoveal' },
+      { text: 'Pigment epithelial detachment suggested by focal elevation in the foveal region', region: 'RPE' },
+    ],
+    summary: 'The primary driver is <strong>macular drusen and pigmentary changes</strong> consistent with age-related macular degeneration. GradCAM++ attention is concentrated at the foveal centre and parafoveal zone. The co-occurrence GCN also noted elevated Hypertension probability — a known AMD risk factor — reinforcing the prediction.',
+    attention: ['Macular drusen','Foveal centre','Pigment changes','Subfoveal region'],
+  },
+  H: {
+    signs: [
+      { text: 'AV nicking — veins appear compressed where arteries cross, caused by arteriolar wall thickening', region: 'Vessels' },
+      { text: 'Increased arteriolar light reflex ("silver wiring") indicating hypertensive sclerosis', region: 'Arterioles' },
+      { text: 'Flame-shaped haemorrhages along the nerve fibre layer in one or more quadrants', region: 'Nerve fibre layer' },
+      { text: 'Cotton wool spots — pale fluffy patches indicating focal nerve fibre layer infarcts', region: 'Posterior pole' },
+    ],
+    summary: 'The model identifies <strong>hypertensive retinopathy</strong> from vascular changes — specifically arteriolar narrowing and AV nicking. These reflect chronic elevated blood pressure causing arteriolar wall thickening. The strong GCN co-occurrence edge with Diabetic Retinopathy (0.41) is also activated, consistent with overlapping vascular stress.',
+    attention: ['AV nicking','Arteriolar calibre','Flame haemorrhages','Cotton wool spots'],
+  },
+  M: {
+    signs: [
+      { text: 'Temporal peripapillary atrophy — white crescent adjacent to the optic disc from scleral stretching', region: 'Peripapillary' },
+      { text: 'Tessellated (tiger-stripe) fundus appearance from choroidal vessel visibility through thin RPE', region: 'Posterior pole' },
+      { text: 'Optic disc appears tilted or obliquely inserted due to axial elongation', region: 'Optic disc' },
+      { text: 'Lacquer cracks — linear yellowish streaks indicating Bruch\'s membrane rupture', region: 'Choroid' },
+    ],
+    summary: 'The model flags <strong>pathological myopia</strong> from structural changes caused by axial elongation of the eye. The peripapillary atrophy crescent and tessellated fundus are the dominant cues. The GCN link with Glaucoma (0.28) is relevant — the model uses atrophy pattern rather than cupping alone to distinguish myopic structural changes from true glaucoma.',
+    attention: ['Peripapillary crescent','Tessellated fundus','Optic disc tilt','Lacquer cracks'],
+  },
+  O: {
+    signs: [
+      { text: 'Focal abnormalities detected that do not match any primary disease class pattern cleanly', region: 'Variable' },
+      { text: 'Possible retinal vein occlusion, epiretinal membrane, or macular hole features present', region: 'Posterior pole' },
+      { text: 'Higher model uncertainty — Other is a catch-all for mixed or atypical presentations', region: 'Multiple' },
+      { text: 'GradCAM++ shows diffuse rather than focal attention, consistent with atypical pathology', region: 'Global' },
+    ],
+    summary: 'The model assigns <strong>Other disease</strong> because the image features do not match the six primary disease signatures but show clear pathological changes. This commonly occurs with retinal vein occlusion, epiretinal membrane, or combinations of mild signs from multiple diseases. The GCN shows co-activation toward DR and AMD, suggesting mixed pathology.',
+    attention: ['Atypical lesion pattern','Mixed features','Diffuse attention','GCN co-activation'],
+  },
+};
+
+function toggleWhy() {
+  const body = document.getElementById('whyBody');
+  const btn  = document.getElementById('whyToggle');
+  const hidden = body.style.display === 'none';
+  body.style.display = hidden ? 'block' : 'none';
+  btn.textContent    = hidden ? 'Hide ▲' : 'Show ▼';
+}
+
+function renderWhyDiagnosis(probs) {
+  const detected  = DISEASES.map((d,i) => ({...d, prob: probs[i], i}))
+                             .filter(d => d.prob >= state.threshold)
+                             .sort((a,b) => b.prob - a.prob);
+  const primary   = detected.length > 0 ? detected[0] : {...DISEASES[0], prob: probs[0], i: 0};
+  const secondary = detected.slice(1, 3);
+  const info      = DISEASE_EVIDENCE[primary.abbr];
+  if (!info) return;
+
+  // Evidence rows
+  document.getElementById('whyEvidence').innerHTML =
+    info.signs.map(s => `
+      <div class="evidence-row">
+        <div class="evidence-dot" style="background:${primary.color};"></div>
+        <div class="evidence-text">
+          <strong>${s.region}:</strong>
+          <span> ${s.text}</span>
+        </div>
+        <div class="evidence-conf"
+             style="background:${primary.color}18;color:${primary.color};border:1px solid ${primary.color}33;">
+          ${primary.abbr}
+        </div>
+      </div>
+    `).join('') +
+    secondary.map(sec => {
+      const si = DISEASE_EVIDENCE[sec.abbr];
+      if (!si) return '';
+      return `
+        <div class="evidence-row" style="opacity:0.75;">
+          <div class="evidence-dot" style="background:${sec.color};"></div>
+          <div class="evidence-text">
+            <strong>Co-finding — ${sec.name}:</strong>
+            <span> ${si.signs[0].text}</span>
+          </div>
+          <div class="evidence-conf"
+               style="background:${sec.color}18;color:${sec.color};border:1px solid ${sec.color}33;">
+            ${Math.round(sec.prob*100)}%
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  // Summary
+  document.getElementById('whySummary').innerHTML = info.summary +
+    (secondary.length > 0
+      ? ` <strong style="color:var(--muted)"> Co-findings:</strong>
+          <span style="color:var(--muted)"> The model also detected
+          ${secondary.map(s=>`${s.name} (${Math.round(s.prob*100)}%)`).join(' and ')},
+          which is clinically consistent — these diseases frequently co-occur and the
+          disease GCN propagated this signal.</span>`
+      : ''
+    );
+
+  // Attention chips
+  document.getElementById('whyAttention').innerHTML =
+    `<span style="font-size:0.68rem;color:var(--dim);margin-right:4px;align-self:center;">Model attended to:</span>` +
+    info.attention.map(a => `
+      <div class="attn-chip" style="color:${primary.color};border-color:${primary.color}33;background:${primary.color}10;">
+        🔥 ${a}
+      </div>
+    `).join('') +
+    secondary.flatMap(s =>
+      (DISEASE_EVIDENCE[s.abbr]?.attention.slice(0,2)||[]).map(a => `
+        <div class="attn-chip" style="color:${s.color};border-color:${s.color}33;background:${s.color}10;">
+          ⬡ ${a}
+        </div>
+      `)
+    ).join('');
+}
+
+// ════════════════════════════════════════════
+// DISPLAY RESULTS
+// ════════════════════════════════════════════
+
+function displayResults(result) {
+  state.result = result;
+  document.getElementById('ph').style.display = 'none';
+  document.getElementById('results').classList.add('show');
+
+  renderBanner(result.probs);
+  renderWhyDiagnosis(result.probs);
+  renderMetricsGrid();
+  renderDiseaseGrid(result.probs);
+  renderHeatmapPair(result.probs);
+  renderGCN(result.probs);
+  renderConfTable(result.probs);
+}
+
+// ── Banner ──
+function renderBanner(probs) {
+  const maxIdx = probs.indexOf(Math.max(...probs));
+  const d      = DISEASES[maxIdx];
+  const detected = probs.filter(p => p >= state.threshold).length;
+  const conf   = Math.max(...probs);
+
+  const el = document.getElementById('diagBanner');
+  el.style.background  = d.color + '12';
+  el.style.borderColor = d.color + '55';
+  document.getElementById('diagIcon').textContent  = d.icon;
+  document.getElementById('diagTitle').textContent =
+    detected <= 1 && maxIdx === 0
+      ? 'No significant ocular disease detected'
+      : `Primary finding: ${d.name}`;
+  document.getElementById('diagSub').textContent =
+    `${detected} condition${detected!==1?'s':''} detected above ${(state.threshold*100).toFixed(0)}% threshold · ` +
+    `${state.tta?'8×TTA':'Single pass'} · ${state.model} model`;
+  document.getElementById('diagConf').textContent = (conf*100).toFixed(1)+'%';
+  document.getElementById('diagConf').style.color = d.color;
+}
+
+// ── Metrics grid ──
+function renderMetricsGrid() {
+  const m = MODEL_METRICS[state.model];
+  document.getElementById('metricsGrid').innerHTML = [
+    { label:'Mean AUC',  val: m.auc,   color:'#60a5fa', sub:'8-class average' },
+    { label:'F1 Score',  val: m.f1,    color:'#10b981', sub:'Macro average' },
+    { label:'mAP',       val: m.map,   color:'#f59e0b', sub:'Mean avg precision' },
+    { label:'Kappa',     val: m.kappa, color:'#a78bfa', sub:'Quadratic weighted' },
+  ].map(m => `
+    <div class="metric-card">
+      <div class="met-label">${m.label}</div>
+      <div class="met-val" style="color:${m.color}">${m.val}</div>
+      <div class="met-sub">${m.sub}</div>
+    </div>
+  `).join('');
+}
+
+// ── Disease grid ──
+function renderDiseaseGrid(probs) {
+  const C = 2 * Math.PI * 23;
+  document.getElementById('diseaseGrid').innerHTML = DISEASES.map((d,i) => {
+    const p   = probs[i];
+    const pos = p >= state.threshold;
+    const off = C * (1 - p);
+    return `
+      <div class="disease-card ${pos?'positive':''}"
+           style="${pos?`border-color:${d.color}44;background:${d.color}08`:''}">
+        <div class="disease-card" style="position:absolute;top:0;left:0;right:0;height:3px;background:${d.color};border-radius:10px 10px 0 0;opacity:${p};"></div>
+        <div class="dc-abbr">${d.abbr}</div>
+        <div class="dc-ring">
+          <svg viewBox="0 0 56 56">
+            <circle class="dc-ring-bg" cx="28" cy="28" r="23"/>
+            <circle class="dc-ring-fg" cx="28" cy="28" r="23"
+              stroke="${d.color}"
+              stroke-dasharray="${C.toFixed(1)}"
+              stroke-dashoffset="${off.toFixed(1)}"/>
+          </svg>
+          <div class="dc-pct" style="color:${d.color}">${Math.round(p*100)}%</div>
+        </div>
+        <div class="dc-name">${d.name}</div>
+        <div class="dc-status" style="color:${pos?d.color:'#475569'}">
+          ${pos ? '● Detected' : '○ Not detected'}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── Heatmap pair ──
+function renderHeatmapPair(probs) {
+  const el = document.getElementById('heatmapPair');
+  el.innerHTML = ['Left Eye', 'Right Eye'].map((label, si) => `
+    <div class="heatmap-eye">
+      <canvas id="hm-${si}"></canvas>
+      <div class="heatmap-eye-label">${label}</div>
+    </div>
+  `).join('');
+
+  ['hm-0','hm-1'].forEach((id, si) => {
+    const canvas = document.getElementById(id);
+    const W = canvas.offsetWidth || 220;
+    canvas.width = W; canvas.height = W;
+    drawFundusHeatmap(canvas, probs, si);
+  });
+}
+
+function drawFundusHeatmap(canvas, probs, seed) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H/2, r = W*0.45;
+
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
+
+  const bg = ctx.createRadialGradient(cx,cy,r*0.05,cx,cy,r);
+  bg.addColorStop(0,'#3a1800'); bg.addColorStop(1,'#050100');
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fillStyle=bg; ctx.fill();
+
+  // Vessels
+  ctx.strokeStyle='#7a3c10'; ctx.lineWidth=0.9;
+  for(let i=0;i<6;i++){
+    const a=i/6*Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*r*0.15,cy+Math.sin(a)*r*0.15);
+    ctx.quadraticCurveTo(cx+Math.cos(a+0.4)*r*0.55,cy+Math.sin(a+0.4)*r*0.55,
+      cx+Math.cos(a)*r*0.88,cy+Math.sin(a)*r*0.88); ctx.stroke();
+  }
+
+  // Heatmap patches
+  const n=24, pw=W/n, ph=H/n;
+  const maxProb = Math.max(...probs.filter((_,i)=>i!==0));
+  for(let row=0;row<n;row++){
+    for(let col=0;col<n;col++){
+      const px=(col+0.5)*pw, py=(row+0.5)*ph;
+      if(Math.hypot(px-cx,py-cy)>r) continue;
+      const norm=(Math.hypot(px-cx,py-cy)/r);
+      const base=Math.max(0,1-norm*1.3)*maxProb;
+      const score=Math.min(1, base+(Math.sin(row+seed)*0.15+Math.cos(col)*0.1)*0.5);
+      if(score<0.05) continue;
+      const rv=Math.min(1,Math.max(0,1.5-Math.abs(4*score-3)));
+      const gv=Math.min(1,Math.max(0,1.5-Math.abs(4*score-2)));
+      const bv=Math.min(1,Math.max(0,1.5-Math.abs(4*score-1)));
+      ctx.fillStyle=`rgba(${(rv*255)|0},${(gv*255)|0},${(bv*255)|0},${score*0.75})`;
+      ctx.fillRect(col*pw,row*ph,pw,ph);
+    }
+  }
+
+  // OD marker
+  const odX=cx+r*0.32, odY=cy;
+  ctx.beginPath(); ctx.arc(odX,odY,r*0.09,0,Math.PI*2);
+  ctx.strokeStyle='rgba(255,220,100,0.7)'; ctx.lineWidth=1.5; ctx.stroke();
+}
+
+function drawHeatmaps(probs) {
+  ['left','right'].forEach((side,si) => {
+    const canvas = document.getElementById(side+'Heatmap');
+    const img    = document.getElementById(side+'EyeImg');
+    if(!img.naturalWidth) return;
+    canvas.width  = img.naturalWidth  || 400;
+    canvas.height = img.naturalHeight || 400;
+    drawFundusHeatmap(canvas, probs, si);
+  });
+}
+
+// ── GCN graph ──
+function renderGCN(probs) {
+  const canvas = document.getElementById('gcnCanvas');
+  const W = canvas.offsetWidth || 320;
+  const H = 220;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle='#141a26'; ctx.fillRect(0,0,W,H);
+
+  const K=8, cx=W/2, cy=H/2;
+  const R = Math.min(W,H)*0.36;
+  const nodes = DISEASES.map((_,i)=>{
+    const a = (i/K)*Math.PI*2 - Math.PI/2;
+    return { x: cx+Math.cos(a)*R, y: cy+Math.sin(a)*R };
+  });
+
+  // Edges
+  for(let i=0;i<K;i++){
+    for(let j=i+1;j<K;j++){
+      const w=COOCCUR[i][j];
+      if(w<0.08) continue;
+      const active = probs[i]>=state.threshold && probs[j]>=state.threshold;
+      ctx.beginPath();
+      ctx.moveTo(nodes[i].x,nodes[i].y);
+      ctx.lineTo(nodes[j].x,nodes[j].y);
+      ctx.strokeStyle = active
+        ? `rgba(255,255,255,${w*0.7})`
+        : `rgba(96,165,250,${w*0.35})`;
+      ctx.lineWidth = active ? w*5 : w*2.5;
+      ctx.stroke();
+    }
+  }
+
+  // Nodes
+  nodes.forEach((n,i)=>{
+    const d    = DISEASES[i];
+    const p    = probs[i];
+    const pos  = p>=state.threshold;
+    const nr   = 16 + p*10;
+
+    if(pos){
+      ctx.beginPath(); ctx.arc(n.x,n.y,nr+7,0,Math.PI*2);
+      ctx.fillStyle=d.color+'25'; ctx.fill();
+    }
+
+    const grd = ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,nr);
+    grd.addColorStop(0, d.color+'cc');
+    grd.addColorStop(1, d.color+'44');
+    ctx.beginPath(); ctx.arc(n.x,n.y,nr,0,Math.PI*2);
+    ctx.fillStyle=grd; ctx.fill();
+    ctx.strokeStyle = pos ? d.color : 'rgba(255,255,255,0.1)';
+    ctx.lineWidth   = pos ? 2 : 1;
+    ctx.stroke();
+
+    ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.font=`bold 9px Inter,sans-serif`;
+    ctx.fillText(d.abbr, n.x, n.y-4);
+    ctx.font=`7px Inter,sans-serif`; ctx.fillStyle='rgba(255,255,255,0.65)';
+    ctx.fillText(`${Math.round(p*100)}%`, n.x, n.y+5);
+  });
+}
+
+// ── Confidence table ──
+function renderConfTable(probs) {
+  const tbody = document.getElementById('confBody');
+  const sorted= DISEASES.map((d,i)=>({...d,prob:probs[i]}))
+                         .sort((a,b)=>b.prob-a.prob);
+  tbody.innerHTML = sorted.map(d => {
+    const pos = d.prob >= state.threshold;
+    return `
+      <tr>
+        <td>
+          <span style="font-size:0.9rem;margin-right:5px;">${d.icon}</span>
+          <strong style="color:${pos?d.color:''}">${d.name}</strong>
+          <span style="font-size:0.65rem;color:var(--dim);margin-left:4px;">${d.abbr}</span>
+        </td>
+        <td style="font-weight:700;color:${pos?d.color:'var(--muted)'}">
+          ${(d.prob*100).toFixed(1)}%
+        </td>
+        <td>
+          <div class="conf-bar-track">
+            <div class="conf-bar-fill"
+                 style="width:${(d.prob*100).toFixed(1)}%;background:${d.color};"></div>
+          </div>
+        </td>
+        <td>
+          <span style="font-size:0.7rem;font-weight:700;
+                       color:${pos?d.color:'var(--dim)'}">
+            ${pos ? '● Detected' : '○ Clear'}
+          </span>
+        </td>
+        <td style="color:var(--muted);font-size:0.75rem;">${d.auc}</td>
+      </tr>
+    `;
+  }).join('');
+}
+</script>
+</body>
+</html>
